@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 
 import static com.example.crmtgbot.handler.MasterProfileHandler.getString;
 
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -75,7 +76,7 @@ public class BookingHandler implements UpdateHandler {
                 st.setSlotId(slot);
                 String tgName = buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
                 st.setNeedNameInput(false);
-                io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.name.ask"), kf.nameChoice(tgName, "home"));
+                io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.name.ask"), kf.profileNameChoice(tgName));
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
@@ -118,17 +119,15 @@ public class BookingHandler implements UpdateHandler {
             }
             switch (data) {
                 case "M:auto" -> {
-                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId().intValue(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
+                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
                     masterService.toggleAuto(m);
                     io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("master.menu"), new KeyboardFactory().masterMenu(m.isAutoConfirm()));
                     io.answerCallback(cq.getId(), "OK", false);
-                    return;
                 }
                 case "M:link" -> {
-                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId().intValue(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
+                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
                     io.answerCallback(cq.getId(), "Ссылка отправлена", false);
                     io.send(chatId, i18n.t("master.link.hint", masterService.deepLink(System.getProperty("bot.username", "your_bot"), m)), null);
-                    return;
                 }
                 case "M:services", "M:schedule" -> io.answerCallback(cq.getId(), "Скоро будет готово 🚧", false);
             }

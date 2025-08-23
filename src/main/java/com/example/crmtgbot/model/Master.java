@@ -17,7 +17,7 @@ public class Master {
     private Long id;
 
     private Long chatId;
-    private Integer userId;
+    private Long userId;
     private String username;
 
     private String displayName;

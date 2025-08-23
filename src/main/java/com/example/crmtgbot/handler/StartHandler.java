@@ -54,7 +54,7 @@ public class StartHandler implements UpdateHandler {
         msg.getFrom().getFirstName();
         String display = (msg.getFrom().getFirstName() +
                 (msg.getFrom().getLastName() == null ? "":" "+msg.getFrom().getLastName())).trim();
-        Master m = masterService.getOrCreateMaster(chatId, msg.getFrom().getId().intValue(), msg.getFrom().getUserName(), display);
+        Master m = masterService.getOrCreateMaster(chatId, msg.getFrom().getId(), msg.getFrom().getUserName(), display);
 
         if (!masterService.isProfileComplete(m)) {
             String newsUrl = "https://t.me/your_news_channel"; // TODO: вынести в конфиг

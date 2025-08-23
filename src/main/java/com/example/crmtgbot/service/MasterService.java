@@ -54,7 +54,7 @@ public class MasterService {
         return masterRepo.save(m);
     }
 
-    public Master getOrCreateMaster(Long chatId, Integer userId, String username, String display){
+    public Master getOrCreateMaster(Long chatId, Long userId, String username, String display){
         return masterRepo.findByChatId(chatId).orElseGet(() ->
                 masterRepo.save(Master.builder()
                         .chatId(chatId)

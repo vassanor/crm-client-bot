@@ -18,7 +18,7 @@ public class UserProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long chatId;
-    private Integer userId;
+    private Long userId;
     private String username;
     private String displayName;
 }

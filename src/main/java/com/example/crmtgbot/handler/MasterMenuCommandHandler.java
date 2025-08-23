@@ -33,7 +33,7 @@ public class MasterMenuCommandHandler implements UpdateHandler {
         Long chatId = m.getChatId();
         m.getFrom().getFirstName();
         String display = m.getFrom().getFirstName() + (m.getFrom().getLastName() == null ? "" : " " + m.getFrom().getLastName());
-        Master master = ms.getOrCreateMaster(chatId, m.getFrom().getId().intValue(), m.getFrom().getUserName(), display.trim());
+        Master master = ms.getOrCreateMaster(chatId, m.getFrom().getId(), m.getFrom().getUserName(), display.trim());
         io.send(chatId, i18n.t("master.menu"), kf.masterMenu(master.isAutoConfirm()));
         io.send(chatId, i18n.t("master.link.hint", ms.deepLink(botUsername, master)), null);
     }
