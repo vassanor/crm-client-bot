@@ -13,17 +13,24 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Master {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private Long chatId;
     private Integer userId;
     private String username;
+
     private String displayName;
+
+    // NEW: профиль
+    private String address;   // адрес приёма
+    private String about;     // описание деятельности
+
     private boolean autoConfirm = true;
+
     @OneToMany(mappedBy = "master", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ServiceItem> services = new ArrayList<>();
+
     @OneToMany(mappedBy = "master", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeSlot> slots = new ArrayList<>();
 }

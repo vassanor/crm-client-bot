@@ -23,10 +23,6 @@ public class MasterService {
     private final ServiceItemRepository serviceRepo;
     private final TimeSlotRepository slotRepo;
 
-    public Master getOrCreateMaster(Long chatId, Integer userId, String username, String display) {
-        return masterRepo.findByChatId(chatId).orElseGet(() -> masterRepo.save(Master.builder().chatId(chatId).userId(userId).username(username).displayName(display).autoConfirm(true).build()));
-    }
-
     public Master findById(Long id) {
         return masterRepo.findById(id).orElseThrow();
     }
@@ -56,5 +52,26 @@ public class MasterService {
     public Master toggleAuto(Master m) {
         m.setAutoConfirm(!m.isAutoConfirm());
         return masterRepo.save(m);
+    }
+
+    public Master getOrCreateMaster(Long chatId, Integer userId, String username, String display){
+        return masterRepo.findByChatId(chatId).orElseGet(() ->
+                masterRepo.save(Master.builder()
+                        .chatId(chatId)
+                        .userId(userId)
+                        .username(username)
+                        .displayName(display)
+                        .autoConfirm(true)
+                        .build()));
+    }
+
+    public Master save(Master m) {
+        return masterRepo.save(m);
+    }
+
+    public boolean isProfileComplete(Master m) { // NEW
+        return m.getDisplayName() != null && !m.getDisplayName().isBlank()
+                && m.getAddress() != null && !m.getAddress().isBlank()
+                && m.getAbout() != null && !m.getAbout().isBlank();
     }
 }

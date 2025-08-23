@@ -2,7 +2,6 @@ package com.example.crmtgbot.service;
 
 import lombok.Data;
 import org.springframework.stereotype.Component;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -12,23 +11,41 @@ public class SessionStore {
 
     @Data
     public static class BookingSessionState {
-        private Long masterId, serviceId, slotId;
+        private Long masterId;
+        private Long serviceId;
+        private Long slotId;
         private boolean needNameInput;
         private String tempName;
         private String navBack;
     }
 
-    private final Map<Long, BookingSessionState> map = new HashMap<>();
-
-    public Optional<BookingSessionState> get(Long chatId) {
-        return Optional.ofNullable(map.get(chatId));
+    // NEW: состояние ввода профиля мастера
+    @Data
+    public static class MasterProfileState {
+        public enum Step { NAME_CHOICE, NAME_INPUT, ADDRESS_INPUT, ABOUT_INPUT, PREVIEW }
+        private Step step;
+        private String name;
+        private String address;
+        private String about;
+        private boolean active;
     }
 
-    public BookingSessionState ensure(Long chatId) {
-        return map.computeIfAbsent(chatId, k -> new BookingSessionState());
-    }
+    private final Map<Long, BookingSessionState> booking = new HashMap<>();
+    private final Map<Long, MasterProfileState> profile = new HashMap<>();
 
-    public void clear(Long chatId) {
-        map.remove(chatId);
+    public Optional<BookingSessionState> get(Long chatId){ return Optional.ofNullable(booking.get(chatId)); }
+    public BookingSessionState ensure(Long chatId){ return booking.computeIfAbsent(chatId,k->new BookingSessionState()); }
+    public void clear(Long chatId){ booking.remove(chatId); }
+
+    // NEW:
+    public MasterProfileState ensureProfile(Long chatId){
+        return profile.computeIfAbsent(chatId, id -> {
+            MasterProfileState s = new MasterProfileState();
+            s.setStep(MasterProfileState.Step.NAME_CHOICE);
+            s.setActive(true);
+            return s;
+        });
     }
+    public Optional<MasterProfileState> getProfile(Long chatId){ return Optional.ofNullable(profile.get(chatId)); }
+    public void clearProfile(Long chatId){ profile.remove(chatId); }
 }

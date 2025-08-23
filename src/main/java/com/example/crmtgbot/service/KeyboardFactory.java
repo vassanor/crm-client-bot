@@ -16,7 +16,6 @@ import java.util.List;
 @Component
 public class KeyboardFactory {
 
-    // ---------- helpers ----------
     private InlineKeyboardRow row(InlineKeyboardButton... buttons) {
         InlineKeyboardRow r = new InlineKeyboardRow();
         r.addAll(Arrays.asList(buttons));
@@ -24,23 +23,18 @@ public class KeyboardFactory {
     }
 
     private InlineKeyboardButton btn(String text, String data) {
-        return InlineKeyboardButton.builder()
-                .text(text)
-                .callbackData(data)
-                .build();
+        return InlineKeyboardButton.builder().text(text).callbackData(data).build();
     }
 
     private InlineKeyboardRow backRow(String data) {
         return row(btn(Emoji.BACK + " Назад", data));
     }
 
-    // ---------- publics ----------
+    // ==== КЛИЕНТ ====
     public InlineKeyboardMarkup services(List<ServiceItem> services, Long masterId) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (ServiceItem s : services) {
-            rows.add(row(
-                    btn(Emoji.SERVICE + " " + s.getName(), "B:svc:" + masterId + ":" + s.getId())
-            ));
+            rows.add(row(btn(Emoji.SERVICE + " " + s.getName(), "B:svc:" + masterId + ":" + s.getId())));
         }
         rows.add(backRow("B:back:home"));
         return new InlineKeyboardMarkup(rows);
@@ -50,10 +44,8 @@ public class KeyboardFactory {
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (TimeSlot s : slots) {
-            rows.add(row(
-                    btn(Emoji.CLOCK + " " + s.getStartTime().format(tf),
-                            "B:slot:" + masterId + ":" + serviceId + ":" + s.getId())
-            ));
+            rows.add(row(btn(Emoji.CLOCK + " " + s.getStartTime().format(tf),
+                    "B:slot:" + masterId + ":" + serviceId + ":" + s.getId())));
         }
         rows.add(backRow(backTarget));
         return new InlineKeyboardMarkup(rows);
@@ -85,10 +77,54 @@ public class KeyboardFactory {
 
     public InlineKeyboardMarkup masterMenu(boolean auto) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn(Emoji.LINK + " Ссылка на запись", "M:link")));
-        rows.add(row(btn(Emoji.SETTINGS + " Автоподтверждение: " + (auto ? "ON" : "OFF"), "M:auto")));
+        rows.add(row(btn("👤 Профиль", "M:profile")));
         rows.add(row(btn(Emoji.SERVICE + " Услуги", "M:services")));
         rows.add(row(btn(Emoji.CALENDAR + " Расписание", "M:schedule")));
+        rows.add(row(btn(Emoji.LINK + " Ссылка на запись", "M:link")));
+        rows.add(row(btn(Emoji.SETTINGS + " Автоподтверждение: " + (auto ? "ON" : "OFF"), "M:auto")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // ==== МАСТЕР: Профиль ====
+    public InlineKeyboardMarkup profileNameChoice(String tgName){
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("👤 " + tgName + " (взять из TG)", "P:name:use")));
+        rows.add(row(btn("✏️ Ввести другое имя", "P:name:input")));
+        rows.add(backRow("M:menu"));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup profileAskAddress(){
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✏️ Ввести адрес", "P:address:input")));
+        rows.add(backRow("P:back:name"));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup profileAskAbout(){
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✏️ Ввести описание", "P:about:input")));
+        rows.add(backRow("P:back:address"));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup welcome(String newsChannelUrl) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✨ Создать профиль", "P:start")));
+        rows.add(row(
+                InlineKeyboardButton.builder()
+                        .text("📣 Наш новостной канал")
+                        .url(newsChannelUrl) // <-- url-кнопка
+                        .build()
+        ));
+        rows.add(row(btn("⏭️ Позже", "M:menu")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup profilePreviewSave(){
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✅ Сохранить профиль", "P:save")));
+        rows.add(backRow("P:back:about"));
         return new InlineKeyboardMarkup(rows);
     }
 }

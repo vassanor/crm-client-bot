@@ -15,6 +15,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+import static com.example.crmtgbot.handler.MasterProfileHandler.getString;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -143,9 +145,6 @@ public class BookingHandler implements UpdateHandler {
     }
 
     private String buildName(String f, String l, String u) {
-        String d = ((f == null ? "" : f) + (l == null ? "" : " " + l)).trim();
-        if (d.isBlank() && u != null) d = "@" + u;
-        if (d.isBlank()) d = "Гость";
-        return d;
+        return getString(f, l, u);
     }
 }

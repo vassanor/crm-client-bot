@@ -14,8 +14,6 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @Slf4j
@@ -53,12 +51,21 @@ public class StartHandler implements UpdateHandler {
             return;
         }
         msg.getFrom().getFirstName();
-        String display = (msg.getFrom().getFirstName() + (msg.getFrom().getLastName() == null ? "" : " " + msg.getFrom().getLastName())).trim();
+        msg.getFrom().getFirstName();
+        String display = (msg.getFrom().getFirstName() +
+                (msg.getFrom().getLastName() == null ? "":" "+msg.getFrom().getLastName())).trim();
         Master m = masterService.getOrCreateMaster(chatId, msg.getFrom().getId().intValue(), msg.getFrom().getUserName(), display);
-        if (masterService.getServices(m).isEmpty()) {
-            ServiceItem s = masterService.addService(m, "Стрижка", 60);
-            masterService.generateDailyTemplate(m, s, LocalDate.now(), LocalTime.of(10, 0), LocalTime.of(18, 0));
+
+        if (!masterService.isProfileComplete(m)) {
+            String newsUrl = "https://t.me/your_news_channel"; // TODO: вынести в конфиг
+            io.send(chatId,
+                    i18n.t("welcome.title") + "\n\n" + i18n.t("welcome.subtitle"),
+                    kf.welcome(newsUrl)
+            );
+            io.send(chatId, i18n.t("welcome.tip"), null);
+            return;
         }
+
         io.send(chatId, i18n.t("master.menu"), kf.masterMenu(m.isAutoConfirm()));
         io.send(chatId, i18n.t("master.link.hint", masterService.deepLink(botUsername, m)), null);
     }
