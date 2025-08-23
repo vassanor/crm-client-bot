@@ -36,7 +36,7 @@ public class BookingHandler implements UpdateHandler {
     public boolean canHandle(Update u) {
         if (u.hasCallbackQuery()) {
             var d = u.getCallbackQuery().getData();
-            return d != null && (d.startsWith("B:") || d.startsWith("M:"));
+            return d != null && (d.startsWith("B:"));
         }
         if (u.hasMessage() && u.getMessage().hasText()) {
             Long chatId = u.getMessage().getChatId();
@@ -66,6 +66,7 @@ public class BookingHandler implements UpdateHandler {
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
+
             if (data.startsWith("B:slot:")) {
                 var p = data.split(":");
                 long mid = Long.parseLong(p[2]);
@@ -74,16 +75,22 @@ public class BookingHandler implements UpdateHandler {
                 st.setMasterId(mid);
                 st.setServiceId(sid);
                 st.setSlotId(slot);
+
                 String tgName = buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
-                st.setNeedNameInput(false);
-                io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.name.ask"), kf.profileNameChoice(tgName));
+                st.setNeedNameInput(true); // позволяем ввести имя текстом
+                io.edit(chatId, cq.getMessage().getMessageId(),
+                        i18n.t("booking.name.ask"),
+                        kf.bookingNameChoice(tgName, "home")); // КНОПКА с B:name:use
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
             if (data.equals("B:name:use")) {
                 String tgName = buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
                 st.setTempName(tgName);
-                io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.confirm", st.getTempName()), kf.confirmBooking(st.getMasterId(), st.getServiceId(), st.getSlotId(), "home"));
+                st.setNeedNameInput(false);
+                io.edit(chatId, cq.getMessage().getMessageId(),
+                        i18n.t("booking.confirm", st.getTempName()),
+                        kf.confirmBooking(st.getMasterId(), st.getServiceId(), st.getSlotId(), "home"));
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
@@ -115,21 +122,6 @@ public class BookingHandler implements UpdateHandler {
             if (data.startsWith("B:back:")) {
                 io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("home"), null);
                 io.answerCallback(cq.getId(), "OK", false);
-                return;
-            }
-            switch (data) {
-                case "M:auto" -> {
-                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
-                    masterService.toggleAuto(m);
-                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("master.menu"), new KeyboardFactory().masterMenu(m.isAutoConfirm()));
-                    io.answerCallback(cq.getId(), "OK", false);
-                }
-                case "M:link" -> {
-                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId(), cq.getFrom().getUserName(), buildName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
-                    io.answerCallback(cq.getId(), "Ссылка отправлена", false);
-                    io.send(chatId, i18n.t("master.link.hint", masterService.deepLink(System.getProperty("bot.username", "your_bot"), m)), null);
-                }
-                case "M:services", "M:schedule" -> io.answerCallback(cq.getId(), "Скоро будет готово 🚧", false);
             }
         } else if (u.hasMessage() && u.getMessage().hasText()) {
             var m = u.getMessage();
@@ -138,7 +130,8 @@ public class BookingHandler implements UpdateHandler {
             if (st.isNeedNameInput()) {
                 st.setTempName(m.getText().trim());
                 st.setNeedNameInput(false);
-                io.send(chatId, i18n.t("booking.confirm", st.getTempName()), new KeyboardFactory().confirmBooking(st.getMasterId(), st.getServiceId(), st.getSlotId(), "home"));
+                io.send(chatId, i18n.t("booking.confirm", st.getTempName()),
+                        kf.confirmBooking(st.getMasterId(), st.getServiceId(), st.getSlotId(), "home"));
             }
         }
     }

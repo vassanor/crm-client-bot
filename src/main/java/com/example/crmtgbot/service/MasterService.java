@@ -74,4 +74,8 @@ public class MasterService {
                 && m.getAddress() != null && !m.getAddress().isBlank()
                 && m.getAbout() != null && !m.getAbout().isBlank();
     }
+
+    public Master findByChatId(Long chatId) {
+        return masterRepo.findByChatId(chatId).orElse(null);
+    }
 }

@@ -19,16 +19,19 @@ public class SessionStore {
         private String navBack;
     }
 
-    // NEW: состояние ввода профиля мастера
+    // SessionStore.MasterProfileState
     @Data
     public static class MasterProfileState {
         public enum Step { NAME_CHOICE, NAME_INPUT, ADDRESS_INPUT, ABOUT_INPUT, PREVIEW }
+        public enum Mode { CREATE, EDIT_NAME, EDIT_ADDRESS, EDIT_ABOUT }   // <--- NEW
         private Step step;
+        private Mode mode = Mode.CREATE;                                   // <--- NEW
         private String name;
         private String address;
         private String about;
         private boolean active;
     }
+
 
     private final Map<Long, BookingSessionState> booking = new HashMap<>();
     private final Map<Long, MasterProfileState> profile = new HashMap<>();

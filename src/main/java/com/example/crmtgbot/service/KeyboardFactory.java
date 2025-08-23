@@ -101,4 +101,33 @@ public class KeyboardFactory {
         rows.add(backRow("P:back:about"));
         return new InlineKeyboardMarkup(rows);
     }
+
+    public InlineKeyboardMarkup profileView() {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✏️ Имя", "P:edit:name")));
+        rows.add(row(btn("✏️ Адрес", "P:edit:address")));
+        rows.add(row(btn("✏️ Деятельность", "P:edit:about")));
+        rows.add(row(btn("🔙 Назад", "M:menu")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // В KeyboardFactory
+    public InlineKeyboardMarkup bookingNameChoice(String tgName, String backTarget) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(
+                InlineKeyboardButton.builder()
+                        .text("👤 " + tgName)
+                        .callbackData("B:name:use")       // <--- ВАЖНО: B:
+                        .build()
+        ));
+        rows.add(row(
+                InlineKeyboardButton.builder()
+                        .text("◀️ Назад")
+                        .callbackData("B:back:" + backTarget)
+                        .build()
+        ));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+
 }

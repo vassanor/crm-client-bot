@@ -48,11 +48,25 @@ public class MasterProfileHandler implements UpdateHandler {
 
             switch (data) {
                 case "M:profile" -> {
-                    // вход в мастер-профиль
-                    String tgName = buildTgName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
-                    st.setActive(true);
-                    st.setStep(SessionStore.MasterProfileState.Step.NAME_CHOICE);
-                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.name.ask"), kf.profileNameChoice(tgName));
+                    Master m = masterService.getOrCreateMaster(chatId, cq.getFrom().getId(), cq.getFrom().getUserName(),
+                            buildTgName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
+                    if (masterService.isProfileComplete(m)) {
+                        io.edit(chatId, cq.getMessage().getMessageId(),
+                                i18n.t("profile.view",
+                                        m.getDisplayName() == null ? "—" : m.getDisplayName(),
+                                        m.getAddress() == null ? "—" : m.getAddress(),
+                                        m.getAbout() == null ? "—" : m.getAbout()),
+                                kf.profileView());
+                    } else {
+                        String tgName = buildTgName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
+
+                        st.setActive(true);
+                        st.setMode(SessionStore.MasterProfileState.Mode.CREATE);         // <---
+                        st.setStep(SessionStore.MasterProfileState.Step.NAME_CHOICE);
+                        io.edit(chatId, cq.getMessage().getMessageId(),
+                                i18n.t("profile.name.ask"),
+                                kf.profileNameChoice(tgName));
+                    }
                     io.answerCallback(cq.getId(), "OK", false);
                     return;
                 }
@@ -67,8 +81,10 @@ public class MasterProfileHandler implements UpdateHandler {
                     // с welcome-экрана
                     String tgName = buildTgName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName());
                     st.setActive(true);
+                    st.setMode(SessionStore.MasterProfileState.Mode.CREATE);
                     st.setStep(SessionStore.MasterProfileState.Step.NAME_CHOICE);
-                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.name.ask"), kf.profileNameChoice(tgName));
+                    io.edit(chatId, cq.getMessage().getMessageId(),
+                            i18n.t("profile.name.ask"), kf.profileNameChoice(tgName));
                     io.answerCallback(cq.getId(), "OK", false);
                     return;
                 }
@@ -117,6 +133,32 @@ public class MasterProfileHandler implements UpdateHandler {
                     io.answerCallback(cq.getId(), "OK", false);
                     return;
                 }
+                case "P:edit:name" -> {
+                    st.setActive(true);
+                    st.setMode(SessionStore.MasterProfileState.Mode.EDIT_NAME);  // <---
+                    st.setStep(SessionStore.MasterProfileState.Step.NAME_INPUT);
+                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.edit.name"), kf.backTo("M:profile"));
+                    io.answerCallback(cq.getId(), "OK", false);
+                    return;
+                }
+                case "P:edit:address" -> {
+                    st.setActive(true);
+                    st.setMode(SessionStore.MasterProfileState.Mode.EDIT_ADDRESS); // <---
+                    st.setStep(SessionStore.MasterProfileState.Step.ADDRESS_INPUT);
+                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.edit.address"), kf.backTo("M:profile"));
+                    io.answerCallback(cq.getId(), "OK", false);
+                    return;
+                }
+                case "P:edit:about" -> {
+                    st.setActive(true);
+                    st.setMode(SessionStore.MasterProfileState.Mode.EDIT_ABOUT);   // <---
+                    st.setStep(SessionStore.MasterProfileState.Step.ABOUT_INPUT);
+                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.edit.about"), kf.backTo("M:profile"));
+                    io.answerCallback(cq.getId(), "OK", false);
+                    return;
+                }
+
+
             }
 
         }
@@ -129,25 +171,74 @@ public class MasterProfileHandler implements UpdateHandler {
 
             switch (st.getStep()) {
                 case NAME_CHOICE, NAME_INPUT -> {
-                    // пользователь просто написал имя
-                    st.setName(text);
-                    st.setStep(SessionStore.MasterProfileState.Step.ADDRESS_INPUT);
-                    io.send(chatId, i18n.t("profile.address.ask"), kf.backTo("P:back:name"));
+                    if (st.getMode() == SessionStore.MasterProfileState.Mode.EDIT_NAME) {
+                        // Сохраняем сразу и возвращаем «Просмотр»
+                        Master m = masterService.findByChatId(chatId);
+                        if (m != null) {
+                            m.setDisplayName(text);
+                            masterService.save(m);
+                        }
+                        st.setActive(false);
+                        io.send(chatId, i18n.t("profile.updated"), null);
+                        io.send(chatId,
+                                i18n.t("profile.view",
+                                        m != null && m.getDisplayName() != null ? m.getDisplayName() : "—",
+                                        m != null && m.getAddress() != null ? m.getAddress() : "—",
+                                        m != null && m.getAbout() != null ? m.getAbout() : "—"),
+                                kf.profileView());
+                    } else {
+                        // CREATE flow
+                        st.setName(text);
+                        st.setStep(SessionStore.MasterProfileState.Step.ADDRESS_INPUT);
+                        io.send(chatId, i18n.t("profile.address.ask"), kf.backTo("P:back:name"));
+                    }
                 }
                 case ADDRESS_INPUT -> {
-                    st.setAddress(text);
-                    st.setStep(SessionStore.MasterProfileState.Step.ABOUT_INPUT);
-                    io.send(chatId, i18n.t("profile.about.ask"), kf.backTo("P:back:address"));
+                    if (st.getMode() == SessionStore.MasterProfileState.Mode.EDIT_ADDRESS) {
+                        Master m = masterService.findByChatId(chatId);
+                        if (m != null) {
+                            m.setAddress(text);
+                            masterService.save(m);
+                        }
+                        st.setActive(false);
+                        io.send(chatId, i18n.t("profile.updated"), null);
+                        io.send(chatId,
+                                i18n.t("profile.view",
+                                        m != null && m.getDisplayName() != null ? m.getDisplayName() : "—",
+                                        m != null && m.getAddress() != null ? m.getAddress() : "—",
+                                        m != null && m.getAbout() != null ? m.getAbout() : "—"),
+                                kf.profileView());
+                    } else {
+                        st.setAddress(text);
+                        st.setStep(SessionStore.MasterProfileState.Step.ABOUT_INPUT);
+                        io.send(chatId, i18n.t("profile.about.ask"), kf.backTo("P:back:address"));
+                    }
                 }
                 case ABOUT_INPUT -> {
-                    st.setAbout(text);
-                    st.setStep(SessionStore.MasterProfileState.Step.PREVIEW);
-                    st.setActive(false); // на предпросмотре больше не принимаем произвольный текст
-                    String preview = i18n.t("profile.preview",
-                            st.getName() == null ? "—" : st.getName(),
-                            st.getAddress() == null ? "—" : st.getAddress(),
-                            st.getAbout() == null ? "—" : st.getAbout());
-                    io.send(chatId, preview, kf.profilePreviewSave());
+                    if (st.getMode() == SessionStore.MasterProfileState.Mode.EDIT_ABOUT) {
+                        Master m = masterService.findByChatId(chatId);
+                        if (m != null) {
+                            m.setAbout(text);
+                            masterService.save(m);
+                        }
+                        st.setActive(false);
+                        io.send(chatId, i18n.t("profile.updated"), null);
+                        io.send(chatId,
+                                i18n.t("profile.view",
+                                        m != null && m.getDisplayName() != null ? m.getDisplayName() : "—",
+                                        m != null && m.getAddress() != null ? m.getAddress() : "—",
+                                        m != null && m.getAbout() != null ? m.getAbout() : "—"),
+                                kf.profileView());
+                    } else {
+                        st.setAbout(text);
+                        st.setStep(SessionStore.MasterProfileState.Step.PREVIEW);
+                        st.setActive(false); // на предпросмотре больше не принимаем произвольный текст
+                        String preview = i18n.t("profile.preview",
+                                st.getName() == null ? "—" : st.getName(),
+                                st.getAddress() == null ? "—" : st.getAddress(),
+                                st.getAbout() == null ? "—" : st.getAbout());
+                        io.send(chatId, preview, kf.profilePreviewSave());
+                    }
                 }
                 default -> { /* ignore */ }
             }
