@@ -52,7 +52,7 @@ public class MasterProfileHandler implements UpdateHandler {
                             buildTgName(cq.getFrom().getFirstName(), cq.getFrom().getLastName(), cq.getFrom().getUserName()));
                     if (masterService.isProfileComplete(m)) {
                         io.edit(chatId, cq.getMessage().getMessageId(),
-                                i18n.t("profile.view",
+                                i18n.t("profile.preview",
                                         m.getDisplayName() == null ? "—" : m.getDisplayName(),
                                         m.getAddress() == null ? "—" : m.getAddress(),
                                         m.getAbout() == null ? "—" : m.getAbout()),

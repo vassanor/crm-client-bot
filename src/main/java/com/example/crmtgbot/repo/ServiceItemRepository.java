@@ -9,4 +9,5 @@ import java.util.List;
 public interface ServiceItemRepository extends JpaRepository<ServiceItem, Long> {
 
     List<ServiceItem> findByMaster(Master m);
+    List<ServiceItem> findByMasterId(Long masterId);
 }

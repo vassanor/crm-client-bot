@@ -112,7 +112,7 @@ public class BookingHandler implements UpdateHandler {
                     io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.done.auto"), null);
                 else {
                     if (m.getChatId() != null)
-                        io.send(m.getChatId(), i18n.t("master.approve.request", display, b.getService().getName(), b.getSlot().getStartTime().toString()), new KeyboardFactory().masterApproval(b.getId()));
+                        io.send(m.getChatId(), i18n.t("master.approve.request", display, b.getService().getName(), b.getSlot().getStartTime().toString()), kf.masterApproval(b.getId()));
                     io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("booking.wait.approval"), null);
                 }
                 io.answerCallback(cq.getId(), "OK", false);

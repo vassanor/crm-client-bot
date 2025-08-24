@@ -5,6 +5,7 @@ import com.example.crmtgbot.i18n.I18n;
 import com.example.crmtgbot.model.Master;
 import com.example.crmtgbot.service.KeyboardFactory;
 import com.example.crmtgbot.service.MasterService;
+import com.example.crmtgbot.service.ServiceItemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ public class MasterMenuHandler implements UpdateHandler {
     private final BotIO io;
     private final I18n i18n;
     private final MasterProfileHandler profileHandler; // <--- проброс
+    private final ServiceItemService serviceItemService;
 
     @Value("${bot.username:your_bot_username}")
     private String botUsername;
@@ -66,7 +68,15 @@ public class MasterMenuHandler implements UpdateHandler {
                         i18n.t("master.link.hint", masterService.deepLink(botUsername, m)),
                         null);
             }
-            case "M:services" -> io.answerCallback(cq.getId(), "Скоро будет готово 🚧", false);
+            case "M:services" -> {
+                var list = serviceItemService.listForMaster(m.getId()); // <--- нужен бин serviceItemService
+                String text = list.isEmpty()
+                        ? i18n.t("services.empty")
+                        : i18n.t("services.title");
+                io.edit(chatId, cq.getMessage().getMessageId(), text, kf.servicesMenu(list));
+                io.answerCallback(cq.getId(), "OK", false);
+            }
+
             case "M:schedule" -> io.answerCallback(cq.getId(), "Скоро будет готово 🚧", false);
             default -> io.answerCallback(cq.getId(), "OK", false);
         }

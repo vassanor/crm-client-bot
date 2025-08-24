@@ -1,9 +1,7 @@
-// src/main/java/com/example/crmtgbot/service/KeyboardFactory.java
 package com.example.crmtgbot.service;
 
 import com.example.crmtgbot.model.ServiceItem;
 import com.example.crmtgbot.model.TimeSlot;
-import com.example.crmtgbot.util.Emoji;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -14,120 +12,176 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
+import com.example.crmtgbot.i18n.I18n;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
 public class KeyboardFactory {
+
+    private final I18n i18n;
 
     private InlineKeyboardRow row(InlineKeyboardButton... buttons) {
         InlineKeyboardRow r = new InlineKeyboardRow();
         r.addAll(Arrays.asList(buttons));
         return r;
     }
+
     private InlineKeyboardButton btn(String text, String data) {
         return InlineKeyboardButton.builder().text(text).callbackData(data).build();
     }
-    private InlineKeyboardRow backRow(String data) { return row(btn(Emoji.BACK + " Назад", data)); }
 
-    // WELCOME
+    private InlineKeyboardRow backRowLabel(String labelKey, String data) {
+        return row(btn(i18n.t(labelKey), data));
+    }
+
+    // ---------- WELCOME ----------
     public InlineKeyboardMarkup welcome(String newsUrl) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn("✨ Создать профиль", "P:start")));
-        rows.add(row(InlineKeyboardButton.builder().text("📣 Наш новостной канал").url(newsUrl).build()));
-        rows.add(row(btn("⏭️ Позже", "M:menu")));
+        rows.add(row(btn(i18n.t("welcome.create"), "P:start")));
+        rows.add(row(InlineKeyboardButton.builder()
+                .text(i18n.t("welcome.news"))
+                .url(newsUrl)
+                .build()));
+        rows.add(row(btn(i18n.t("welcome.later"), "M:menu")));
         return new InlineKeyboardMarkup(rows);
     }
 
-    // Клиентские клавиатуры (без изменений)
+    // ---------- BOOKING (client) ----------
     public InlineKeyboardMarkup services(List<ServiceItem> services, Long masterId) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (ServiceItem s : services) {
-            rows.add(row(btn(Emoji.SERVICE + " " + s.getName(), "B:svc:" + masterId + ":" + s.getId())));
+            rows.add(row(btn(i18n.t("booking.button.service", s.getName()),
+                    "B:svc:" + masterId + ":" + s.getId())));
         }
-        rows.add(backRow("B:back:home"));
+        rows.add(backRowLabel("booking.button.back", "B:back:home"));
         return new InlineKeyboardMarkup(rows);
     }
+
     public InlineKeyboardMarkup slots(List<TimeSlot> slots, Long masterId, Long serviceId, String backTarget) {
         DateTimeFormatter tf = DateTimeFormatter.ofPattern("HH:mm");
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (TimeSlot s : slots) {
-            rows.add(row(btn(Emoji.CLOCK + " " + s.getStartTime().format(tf),
-                    "B:slot:" + masterId + ":" + serviceId + ":" + s.getId())));
+            String label = i18n.t("booking.button.slot", s.getStartTime().format(tf));
+            rows.add(row(btn(label, "B:slot:" + masterId + ":" + serviceId + ":" + s.getId())));
         }
-        rows.add(backRow(backTarget));
-        return new InlineKeyboardMarkup(rows);
-    }
-    public InlineKeyboardMarkup confirmBooking(Long masterId, Long serviceId, Long slotId, String backTarget) {
-        List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn(Emoji.OK + " Подтвердить", "B:confirm:" + masterId + ":" + serviceId + ":" + slotId)));
-        rows.add(row(btn(Emoji.NO + " Отмена", "B:back:" + backTarget)));
+        rows.add(backRowLabel("booking.button.back", backTarget));
         return new InlineKeyboardMarkup(rows);
     }
 
+    public InlineKeyboardMarkup confirmBooking(Long masterId, Long serviceId, Long slotId, String backTarget) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("booking.button.confirm"), "B:confirm:" + masterId + ":" + serviceId + ":" + slotId)));
+        rows.add(row(btn(i18n.t("booking.button.cancel"), "B:back:" + backTarget)));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup bookingNameChoice(String tgName, String backTarget) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(InlineKeyboardButton.builder()
+                .text(i18n.t("booking.button.use.tgname", tgName))
+                .callbackData("B:name:use")
+                .build()));
+        rows.add(backRowLabel("booking.button.back", "B:back:" + backTarget));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // ---------- MASTER APPROVAL ----------
     public InlineKeyboardMarkup masterApproval(Long bookingId) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         rows.add(row(
-                btn(Emoji.OK + " Принять", "A:ok:" + bookingId),
-                btn(Emoji.NO + " Отклонить", "A:no:" + bookingId)
+                btn(i18n.t("approval.button.accept"), "A:ok:" + bookingId),
+                btn(i18n.t("approval.button.reject"), "A:no:" + bookingId)
         ));
         return new InlineKeyboardMarkup(rows);
     }
 
+    // ---------- MASTER MENU ----------
     public InlineKeyboardMarkup masterMenu(boolean auto) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn("👤 Профиль", "M:profile")));
-        rows.add(row(btn(Emoji.SERVICE + " Услуги", "M:services")));
-        rows.add(row(btn(Emoji.CALENDAR + " Расписание", "M:schedule")));
-        rows.add(row(btn(Emoji.LINK + " Ссылка на запись", "M:link")));
-        rows.add(row(btn(Emoji.SETTINGS + " Автоподтверждение: " + (auto ? "ON" : "OFF"), "M:auto")));
+        rows.add(row(btn(i18n.t("menu.button.profile"), "M:profile")));
+        rows.add(row(btn(i18n.t("menu.button.services"), "M:services")));
+        rows.add(row(btn(i18n.t("menu.button.schedule"), "M:schedule")));
+        rows.add(row(btn(i18n.t("menu.button.link"), "M:link")));
+        rows.add(row(btn(i18n.t("menu.button.auto", (auto ? "ON" : "OFF")), "M:auto")));
         return new InlineKeyboardMarkup(rows);
     }
 
-    // Профиль: только «взять из TG» + «Назад»
-    public InlineKeyboardMarkup profileNameChoice(String tgName){
+    // ---------- PROFILE ----------
+    public InlineKeyboardMarkup profileNameChoice(String tgName) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn("👤 " + tgName + " (взять из TG)", "P:name:use")));
-        rows.add(backRow("M:menu"));
+        rows.add(row(btn(i18n.t("profile.button.take.from.tg", tgName), "P:name:use")));
+        rows.add(backRowLabel("profile.button.back", "M:menu"));
         return new InlineKeyboardMarkup(rows);
     }
 
-    // Кнопки «Назад», пока ждём текст
     public InlineKeyboardMarkup backTo(String backData) {
-        return new InlineKeyboardMarkup(List.of(backRow(backData)));
+        return new InlineKeyboardMarkup(List.of(backRowLabel("common.back", backData)));
     }
 
-    // Предпросмотр/сохранение
-    public InlineKeyboardMarkup profilePreviewSave(){
+    public InlineKeyboardMarkup profilePreviewSave() {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn("✅ Сохранить профиль", "P:save")));
-        rows.add(backRow("P:back:about"));
+        rows.add(row(btn(i18n.t("profile.button.save"), "P:save")));
+        rows.add(backRowLabel("profile.button.back", "P:back:about"));
         return new InlineKeyboardMarkup(rows);
     }
 
     public InlineKeyboardMarkup profileView() {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn("✏️ Имя", "P:edit:name")));
-        rows.add(row(btn("✏️ Адрес", "P:edit:address")));
-        rows.add(row(btn("✏️ Деятельность", "P:edit:about")));
-        rows.add(row(btn("🔙 Назад", "M:menu")));
+        rows.add(row(btn(i18n.t("profile.button.edit.name"), "P:edit:name")));
+        rows.add(row(btn(i18n.t("profile.button.edit.address"), "P:edit:address")));
+        rows.add(row(btn(i18n.t("profile.button.edit.about"), "P:edit:about")));
+        rows.add(backRowLabel("profile.button.back", "M:menu"));
         return new InlineKeyboardMarkup(rows);
     }
 
-    // В KeyboardFactory
-    public InlineKeyboardMarkup bookingNameChoice(String tgName, String backTarget) {
+    // ---------- SERVICES (master CRUD) ----------
+    public InlineKeyboardMarkup servicesMenu(List<ServiceItem> list) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(
-                InlineKeyboardButton.builder()
-                        .text("👤 " + tgName)
-                        .callbackData("B:name:use")       // <--- ВАЖНО: B:
-                        .build()
-        ));
-        rows.add(row(
-                InlineKeyboardButton.builder()
-                        .text("◀️ Назад")
-                        .callbackData("B:back:" + backTarget)
-                        .build()
-        ));
+        if (list.isEmpty()) {
+            rows.add(row(btn(i18n.t("services.button.add"), "S:add")));
+        } else {
+            for (ServiceItem s : list) {
+                rows.add(row(btn("🛠 " + s.getName(), "S:view:" + s.getId()))); // название услуги всегда уникально на кнопке
+            }
+            rows.add(row(btn(i18n.t("services.button.add"), "S:add")));
+        }
+        rows.add(backRowLabel("services.button.back", "M:menu"));
         return new InlineKeyboardMarkup(rows);
     }
 
+    public InlineKeyboardMarkup serviceView(Long id) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("services.button.edit"), "S:edit:" + id)));
+        rows.add(row(btn(i18n.t("services.button.delete"), "S:delete:" + id)));
+        rows.add(backRowLabel("services.button.back", "M:services"));
+        return new InlineKeyboardMarkup(rows);
+    }
 
+    public InlineKeyboardMarkup serviceEditMenu(Long id) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("✏️ Название", "S:edit:name:" + id)));
+        rows.add(row(btn("✏️ Описание", "S:edit:desc:" + id)));
+        rows.add(row(btn("✏️ Адрес", "S:edit:addr:" + id)));
+        rows.add(row(btn("✏️ Стоимость", "S:edit:price:" + id)));
+        rows.add(row(btn("✏️ Длительность", "S:edit:dur:" + id)));
+        rows.add(backRowLabel("services.button.back", "S:view:" + id));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup addressChoice(String backData) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("services.button.address.from.profile"), "S:addr:profile")));
+        rows.add(backRowLabel("services.button.back", backData));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup addressEditChoice(Long id) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("services.button.address.from.profile"), "S:addr:profile:" + id)));
+        rows.add(backRowLabel("services.button.back", "S:edit:" + id));
+        return new InlineKeyboardMarkup(rows);
+    }
 }
+
