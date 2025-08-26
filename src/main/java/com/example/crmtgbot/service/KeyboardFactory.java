@@ -7,10 +7,12 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 
 import com.example.crmtgbot.i18n.I18n;
@@ -183,5 +185,119 @@ public class KeyboardFactory {
         rows.add(backRowLabel("services.button.back", "S:edit:" + id));
         return new InlineKeyboardMarkup(rows);
     }
+
+    public InlineKeyboardMarkup scheduleDayMenu(LocalDate day) {
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.day.view"), "C:view:"+ day)));
+        rows.add(row(btn(i18n.t("schedule.day.generate"), "C:gen:"+ day)));
+        rows.add(row(btn(i18n.t("schedule.day.clear"), "C:clear:"+ day)));
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:week")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup scheduleChooseService(List<ServiceItem> services) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        for (ServiceItem s : services) {
+            rows.add(row(btn("🛠 " + s.getName(), "C:svc:"+ s.getId())));
+        }
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:day")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup scheduleTimePresets(String backData) {
+        // Несколько популярных окон (можно дополнять)
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn("10:00 — 18:00", "C:preset:10:00-18:00")));
+        rows.add(row(btn("11:00 — 20:00", "C:preset:11:00-20:00")));
+        rows.add(row(btn(i18n.t("schedule.back"), backData)));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup scheduleOverlapConfirm(LocalDate day) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.overlap.replace"), "C:over:replace:"+ day)));
+        rows.add(row(btn(i18n.t("schedule.overlap.append"), "C:over:append:"+ day)));
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:day")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // Кнопка bulk на экране недели (ДОБАВЬ В scheduleWeek)
+    public InlineKeyboardMarkup scheduleWeek(LocalDate monday, Map<LocalDate, Long> counters) {
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd.MM");
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(
+                btn(i18n.t("schedule.week.prev"), "C:week:prev"),
+                btn(i18n.t("schedule.week.next"), "C:week:next")
+        ));
+        for (int i=0; i<7; i++){
+            LocalDate d = monday.plusDays(i);
+            long cnt = counters.getOrDefault(d, 0L);
+            String label = i18n.t("schedule.day.button",
+                    d.format(df),
+                    cnt == 0 ? i18n.t("schedule.day.empty") : String.valueOf(cnt));
+            rows.add(row(btn(label, "C:day:"+ d)));
+        }
+        rows.add(row(btn(i18n.t("schedule.week.bulk"), "C:bulk:start"))); // <— вот эта новая кнопка
+        rows.add(row(btn(i18n.t("schedule.back"), "M:menu")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // Выбор количества недель
+    public InlineKeyboardMarkup scheduleBulkWeeks() {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.bulk.weeks.1"), "C:bulk:w:1")));
+        rows.add(row(btn(i18n.t("schedule.bulk.weeks.2"), "C:bulk:w:2")));
+        rows.add(row(btn(i18n.t("schedule.bulk.weeks.4"), "C:bulk:w:4")));
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:week")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // Пикер дней недели (тоггл). selected — множество выбранных дней.
+    public InlineKeyboardMarkup scheduleWeekdayPicker(java.util.EnumSet<java.time.DayOfWeek> selected) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(
+                btn(labelFor(selected, java.time.DayOfWeek.MONDAY,  "weekday.mon"), "C:bulk:wd:MON"),
+                btn(labelFor(selected, java.time.DayOfWeek.TUESDAY, "weekday.tue"), "C:bulk:wd:TUE"),
+                btn(labelFor(selected, java.time.DayOfWeek.WEDNESDAY,"weekday.wed"), "C:bulk:wd:WED")
+        ));
+        rows.add(row(
+                btn(labelFor(selected, java.time.DayOfWeek.THURSDAY,"weekday.thu"), "C:bulk:wd:THU"),
+                btn(labelFor(selected, java.time.DayOfWeek.FRIDAY,  "weekday.fri"), "C:bulk:wd:FRI"),
+                btn(labelFor(selected, java.time.DayOfWeek.SATURDAY,"weekday.sat"), "C:bulk:wd:SAT")
+        ));
+        rows.add(row(
+                btn(labelFor(selected, java.time.DayOfWeek.SUNDAY,  "weekday.sun"), "C:bulk:wd:SUN")
+        ));
+        rows.add(row(
+                btn(i18n.t("schedule.bulk.weekdays.all"), "C:bulk:wd:ALL"),
+                btn(i18n.t("schedule.bulk.weekdays.done"), "C:bulk:wd:DONE")
+        ));
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:week")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    private String labelFor(java.util.EnumSet<java.time.DayOfWeek> selected, java.time.DayOfWeek d, String i18nKey) {
+        String name = i18n.t(i18nKey);
+        return (selected.contains(d) ? "✅ " : "⬜ ") + name;
+    }
+
+    // Подтверждение режима пересечений (bulk)
+    public InlineKeyboardMarkup scheduleBulkOverlap() {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.bulk.replace"), "C:bulk:over:replace")));
+        rows.add(row(btn(i18n.t("schedule.bulk.append"), "C:bulk:over:append")));
+        rows.add(row(btn(i18n.t("schedule.back"), "C:back:week")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // Финальное подтверждение bulk
+    public InlineKeyboardMarkup scheduleBulkConfirm() {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.bulk.confirm"), "C:bulk:confirm")));
+        rows.add(row(btn(i18n.t("schedule.bulk.cancel"), "C:back:week")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
 }
 

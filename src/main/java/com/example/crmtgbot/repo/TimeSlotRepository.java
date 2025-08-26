@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
+    long countByMasterIdAndStartTimeBetween(Long masterId, LocalDateTime start, LocalDateTime end);
+    List<TimeSlot> findByMasterIdAndStartTimeBetweenOrderByStartTime(Long masterId, LocalDateTime start, LocalDateTime end);
+    void deleteByMasterIdAndStartTimeBetween(Long masterId, LocalDateTime start, LocalDateTime end);
 
     List<TimeSlot> findByMasterAndServiceAndBookedFalseAndStartTimeBetween(Master m, ServiceItem s, LocalDateTime from, LocalDateTime to);
 }

@@ -24,6 +24,7 @@ public class MasterMenuHandler implements UpdateHandler {
     private final I18n i18n;
     private final MasterProfileHandler profileHandler; // <--- проброс
     private final ServiceItemService serviceItemService;
+    private final ScheduleHandler scheduleHandler;
 
     @Value("${bot.username:your_bot_username}")
     private String botUsername;
@@ -77,7 +78,7 @@ public class MasterMenuHandler implements UpdateHandler {
                 io.answerCallback(cq.getId(), "OK", false);
             }
 
-            case "M:schedule" -> io.answerCallback(cq.getId(), "Скоро будет готово 🚧", false);
+            case "M:schedule" -> scheduleHandler.handle(u);
             default -> io.answerCallback(cq.getId(), "OK", false);
         }
     }

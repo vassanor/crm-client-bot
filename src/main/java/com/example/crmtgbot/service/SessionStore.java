@@ -4,6 +4,7 @@ import com.example.crmtgbot.handler.ServiceItemHandler;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -115,5 +116,43 @@ public class SessionStore {
     }
     public void clearServiceSession(Long chatId) { serviceSessions.remove(chatId); }
 
+    @Data
+    public static class CalendarSession {
+        // внутри SessionStore.CalendarSession
+        public enum Step {
+            NONE, PICK_SERVICE, ASK_START, ASK_END, OVERLAP,
+            BULK_WEEKS, BULK_WEEKDAYS, BULK_OVERLAP, BULK_CONFIRM
+        }
+
+        private boolean bulk;                    // включен ли bulk-режим
+        private Integer weeks;                   // 1/2/4
+        private java.util.EnumSet<java.time.DayOfWeek> weekdays; // выбранные дни
+
+        private LocalDate weekStart;      // понедельник текущего экрана
+        private LocalDate targetDay;      // выбранный день
+        private Long serviceId;           // выбранная услуга для генерации
+        private String startStr;          // сырой ввод
+        private String endStr;            // сырой ввод
+        private Step step = Step.NONE;
+        private boolean active;
+        private Boolean bulkReplace;
+    }
+
+    private final Map<Long, CalendarSession> calendar = new ConcurrentHashMap<>();
+
+    public CalendarSession ensureCalendar(Long chatId) {
+        return calendar.computeIfAbsent(chatId, id -> {
+            var cs = new CalendarSession();
+            cs.setWeekStart(weekStart(LocalDate.now()));
+            cs.setActive(false);
+            return cs;
+        });
+    }
+    public Optional<CalendarSession> getCalendar(Long chatId) { return Optional.ofNullable(calendar.get(chatId)); }
+    public void clearCalendar(Long chatId) { calendar.remove(chatId); }
+
+    private LocalDate weekStart(LocalDate any) {
+        return any.with(java.time.DayOfWeek.MONDAY);
+    }
 
 }

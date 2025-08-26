@@ -50,12 +50,16 @@ public class ServiceItemHandler implements UpdateHandler {
 
             // -------- CREATE FLOW --------
             if (data.equals("S:add")) {
+                // 🔧 важно: гасим режим профиля, чтобы он не перехватывал текст
+                sessions.getProfile(chatId).ifPresent(p -> p.setActive(false));
+
                 sessions.startCreateService(chatId);
                 io.edit(chatId, cq.getMessage().getMessageId(),
                         i18n.t("service.enter.name"),
                         kf.backTo("M:services"));
                 return;
             }
+
 
             if (data.startsWith("S:view:")) {
                 Long id = Long.parseLong(data.split(":")[2]);

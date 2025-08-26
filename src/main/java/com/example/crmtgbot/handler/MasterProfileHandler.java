@@ -27,16 +27,21 @@ public class MasterProfileHandler implements UpdateHandler {
     public boolean canHandle(Update u) {
         if (u.hasCallbackQuery()) {
             String data = u.getCallbackQuery().getData();
-            return data != null && (data.startsWith("P:") || data.equals("M:profile") || data.equals("M:menu"));
+            return data != null && (data.startsWith("P:")
+                    || data.equals("M:profile")
+                    || data.equals("M:menu"));
         }
         if (u.hasMessage() && u.getMessage().hasText()) {
             Long chatId = u.getMessage().getChatId();
-            return sessions.getProfile(chatId)
+            boolean serviceActive = sessions.getServiceSession(chatId) != null;   // ⬅️ добавили
+            boolean profileActive = sessions.getProfile(chatId)
                     .map(SessionStore.MasterProfileState::isActive)
                     .orElse(false);
+            return profileActive && !serviceActive; // ⬅️ приоритет услуги над профилем
         }
         return false;
     }
+
 
     @Override
     public void handle(Update u) {
