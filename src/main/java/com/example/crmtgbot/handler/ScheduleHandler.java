@@ -1,4 +1,3 @@
-// src/main/java/com/example/crmtgbot/handler/ScheduleHandler.java
 package com.example.crmtgbot.handler;
 
 import com.example.crmtgbot.bot.BotIO;
@@ -6,7 +5,11 @@ import com.example.crmtgbot.i18n.I18n;
 import com.example.crmtgbot.model.Master;
 import com.example.crmtgbot.model.ServiceItem;
 import com.example.crmtgbot.model.TimeSlot;
-import com.example.crmtgbot.service.*;
+import com.example.crmtgbot.service.KeyboardFactory;
+import com.example.crmtgbot.service.MasterService;
+import com.example.crmtgbot.service.ScheduleService;
+import com.example.crmtgbot.service.ServiceItemService;
+import com.example.crmtgbot.service.SessionStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -83,13 +86,12 @@ public class ScheduleHandler implements UpdateHandler {
             }
 
             if ("C:back:week".equals(data)) {
-                // общий возврат к неделе
                 renderWeek(chatId, cq.getMessage().getMessageId(), cs, m);
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
 
-            // возврат к дню (с учётом bulk)
+            // возврат к дню (в bulk уходим на неделю)
             if ("C:back:day".equals(data)) {
                 if (Boolean.TRUE.equals(cs.isBulk())) {
                     renderWeek(chatId, cq.getMessage().getMessageId(), cs, m);
@@ -98,7 +100,7 @@ public class ScheduleHandler implements UpdateHandler {
                     long cnt = scheduleService.countDaySlots(m.getId(), day);
                     io.edit(chatId, cq.getMessage().getMessageId(),
                             i18n.t("schedule.day.menu", DF.format(day), String.valueOf(cnt)),
-                            kf.scheduleDayMenu(day));
+                            kf.scheduleDayMenu(day, cnt));
                 } else {
                     renderWeek(chatId, cq.getMessage().getMessageId(), cs, m);
                 }
@@ -113,7 +115,7 @@ public class ScheduleHandler implements UpdateHandler {
                 long cnt = scheduleService.countDaySlots(m.getId(), day);
                 io.edit(chatId, cq.getMessage().getMessageId(),
                         i18n.t("schedule.day.menu", DF.format(day), String.valueOf(cnt)),
-                        kf.scheduleDayMenu(day));
+                        kf.scheduleDayMenu(day, cnt));
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
@@ -127,17 +129,18 @@ public class ScheduleHandler implements UpdateHandler {
                     sb.append(i18n.t("schedule.view.slots.line", s.getStartTime().format(TF))).append("\n");
                 }
                 if (slots.isEmpty()) sb.append(i18n.t("schedule.day.empty"));
-                io.edit(chatId, cq.getMessage().getMessageId(), sb.toString(), kf.scheduleDayMenu(day));
+                io.edit(chatId, cq.getMessage().getMessageId(), sb.toString(), kf.scheduleDayMenu(day, slots.size()));
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
 
-            // очистка дня
-            if (data.startsWith("C:clear:")) {
-                LocalDate day = LocalDate.parse(data.substring("C:clear:".length()));
+            // взять выходной (очистить день)
+            if (data.startsWith("C:dayoff:")) {
+                LocalDate day = LocalDate.parse(data.substring("C:dayoff:".length()));
                 scheduleService.clearDay(m.getId(), day);
-                io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("schedule.cleared"),
-                        kf.scheduleDayMenu(day));
+                io.edit(chatId, cq.getMessage().getMessageId(),
+                        i18n.t("schedule.day.dayoff.done"),
+                        kf.scheduleDayMenu(day, 0));
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
@@ -149,7 +152,7 @@ public class ScheduleHandler implements UpdateHandler {
                 var services = serviceItemService.listForMaster(m.getId());
                 if (services.isEmpty()) {
                     io.edit(chatId, cq.getMessage().getMessageId(),
-                            "Сначала создайте услугу в меню «🛠 Услуги».", kf.scheduleDayMenu(day));
+                            "Сначала создайте услугу в меню «🛠 Услуги».", kf.scheduleDayMenu(day, 0));
                 } else {
                     cs.setActive(true);
                     cs.setStep(SessionStore.CalendarSession.Step.PICK_SERVICE);
@@ -162,8 +165,8 @@ public class ScheduleHandler implements UpdateHandler {
                 return;
             }
 
-            // ===== BULK: старт с недели =====
-            if ("C:bulk:start".equals(data)) {
+            // ===== БЫСТРАЯ НАСТРОЙКА: старт с недели =====
+            if ("C:setup:start".equals(data)) {
                 cs.setBulk(true);
                 cs.setWeeks(null);
                 cs.setWeekdays(java.util.EnumSet.noneOf(DayOfWeek.class));
@@ -185,7 +188,7 @@ public class ScheduleHandler implements UpdateHandler {
                 return;
             }
 
-            // общий выбор услуги (используется и в day, и в bulk)
+            // общий выбор услуги (и day, и bulk)
             if (data.startsWith("C:svc:")) {
                 Long svcId = Long.parseLong(data.substring("C:svc:".length()));
                 cs.setServiceId(svcId);
@@ -217,14 +220,13 @@ public class ScheduleHandler implements UpdateHandler {
                 return;
             }
 
-            // ===== BULK: выбор дней недели (тоггл/все/готово) =====
-// ===== BULK: выбор дней недели (тоггл/все/готово) =====
+            // ===== BULK: выбор рабочих дней (тоггл/все/готово) =====
             if (data.startsWith("C:bulk:wd:")) {
                 String tail = data.substring("C:bulk:wd:".length());
                 switch (tail) {
                     case "ALL" -> cs.setWeekdays(java.util.EnumSet.of(
-                            java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY, java.time.DayOfWeek.WEDNESDAY,
-                            java.time.DayOfWeek.THURSDAY, java.time.DayOfWeek.FRIDAY, java.time.DayOfWeek.SATURDAY, java.time.DayOfWeek.SUNDAY));
+                            DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY));
                     case "DONE" -> {
                         if (cs.getWeekdays().isEmpty()) {
                             io.answerCallback(cq.getId(), "Выберите хотя бы один день", true);
@@ -238,7 +240,7 @@ public class ScheduleHandler implements UpdateHandler {
                         return;
                     }
                     default -> {
-                        java.time.DayOfWeek d = parseDow(tail);              // <-- тут используем парсер
+                        DayOfWeek d = parseDow(tail);
                         if (cs.getWeekdays().contains(d)) cs.getWeekdays().remove(d);
                         else cs.getWeekdays().add(d);
                     }
@@ -249,7 +251,6 @@ public class ScheduleHandler implements UpdateHandler {
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
-
 
             // пресеты времени (и для day, и для bulk)
             if (data.startsWith("C:preset:")) {
@@ -320,7 +321,9 @@ public class ScheduleHandler implements UpdateHandler {
 
                 io.edit(chatId, cq.getMessage().getMessageId(),
                         i18n.t("schedule.bulk.generated", String.valueOf(created)),
-                        kf.scheduleWeek(cs.getWeekStart(), buildCounters(m, cs.getWeekStart())));
+                        kf.scheduleWeek(cs.getWeekStart(),
+                                buildCounters(m, cs.getWeekStart()),
+                                scheduleService.hasAnySlots(m.getId())));
                 // сброс bulk-состояния
                 cs.setBulk(false);
                 cs.setWeeks(null);
@@ -393,10 +396,22 @@ public class ScheduleHandler implements UpdateHandler {
     private void renderWeek(Long chatId, Integer msgId, SessionStore.CalendarSession cs, Master m) {
         LocalDate mon = cs.getWeekStart();
         LocalDate sun = mon.plusDays(6);
-        Map<LocalDate, Long> counters = buildCounters(m, mon);
-        String title = i18n.t("schedule.title", mon.format(DF), sun.format(DF));
-        if (msgId == null) io.send(chatId, title, kf.scheduleWeek(mon, counters));
-        else io.edit(chatId, msgId, title, kf.scheduleWeek(mon, counters));
+        boolean hasAny = scheduleService.hasAnySlots(m.getId());
+        Map<LocalDate, Long> counters = new LinkedHashMap<>();
+        if (hasAny) {
+            for (int i = 0; i < 7; i++) {
+                LocalDate d = mon.plusDays(i);
+                counters.put(d, scheduleService.countDaySlots(m.getId(), d));
+            }
+        }
+        String title = hasAny
+                ? i18n.t("schedule.title", mon.format(DF), sun.format(DF))
+                : i18n.t("schedule.week.empty");
+
+        if (msgId == null)
+            io.send(chatId, title, kf.scheduleWeek(mon, counters, hasAny));
+        else
+            io.edit(chatId, msgId, title, kf.scheduleWeek(mon, counters, hasAny));
     }
 
     private boolean isTime(String s) {
@@ -420,12 +435,12 @@ public class ScheduleHandler implements UpdateHandler {
         long cnt = scheduleService.countDaySlots(m.getId(), day);
         if (msgId == null)
             io.send(chatId, txt + "\n\n" + i18n.t("schedule.day.menu", DF.format(day), String.valueOf(cnt)),
-                    kf.scheduleDayMenu(day));
+                    kf.scheduleDayMenu(day, cnt));
         else
             io.edit(chatId, msgId, txt + "\n\n" + i18n.t("schedule.day.menu", DF.format(day), String.valueOf(cnt)),
-                    kf.scheduleDayMenu(day));
+                    kf.scheduleDayMenu(day, cnt));
 
-        // сброс «мастера генерации» для day-flow
+        // сброс состояния day-flow
         cs.setStep(SessionStore.CalendarSession.Step.NONE);
         cs.setServiceId(null);
         cs.setStartStr(null);
@@ -477,17 +492,16 @@ public class ScheduleHandler implements UpdateHandler {
         return counters;
     }
 
-    private java.time.DayOfWeek parseDow(String code) {
+    private DayOfWeek parseDow(String code) {
         return switch (code) {
-            case "MON" -> java.time.DayOfWeek.MONDAY;
-            case "TUE" -> java.time.DayOfWeek.TUESDAY;
-            case "WED" -> java.time.DayOfWeek.WEDNESDAY;
-            case "THU" -> java.time.DayOfWeek.THURSDAY;
-            case "FRI" -> java.time.DayOfWeek.FRIDAY;
-            case "SAT" -> java.time.DayOfWeek.SATURDAY;
-            case "SUN" -> java.time.DayOfWeek.SUNDAY;
+            case "MON" -> DayOfWeek.MONDAY;
+            case "TUE" -> DayOfWeek.TUESDAY;
+            case "WED" -> DayOfWeek.WEDNESDAY;
+            case "THU" -> DayOfWeek.THURSDAY;
+            case "FRI" -> DayOfWeek.FRIDAY;
+            case "SAT" -> DayOfWeek.SATURDAY;
+            case "SUN" -> DayOfWeek.SUNDAY;
             default -> throw new IllegalArgumentException("Unknown weekday code: " + code);
         };
     }
-
 }

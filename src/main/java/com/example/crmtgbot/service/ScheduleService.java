@@ -6,6 +6,7 @@ import com.example.crmtgbot.model.TimeSlot;
 import com.example.crmtgbot.repo.TimeSlotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -16,7 +17,9 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ScheduleService {
+
     private final TimeSlotRepository slotRepo;
 
     public List<TimeSlot> available(Master m, ServiceItem s, LocalDate day) {
@@ -37,6 +40,7 @@ public class ScheduleService {
         return slotRepo.findByMasterIdAndStartTimeBetweenOrderByStartTime(masterId, startOfDay, endOfDay);
     }
 
+    @Transactional
     public void clearDay(Long masterId, LocalDate day) {
         LocalDateTime startOfDay = day.atStartOfDay();
         LocalDateTime endOfDay = day.plusDays(1).atStartOfDay();
@@ -46,6 +50,7 @@ public class ScheduleService {
     /**
      * Генерация слотов по услуге.
      */
+    @Transactional
     public int generateSlots(Master master, ServiceItem service, LocalDate day,
                              LocalTime start, LocalTime end, boolean replace) {
         if (replace) clearDay(master.getId(), day);
@@ -66,6 +71,7 @@ public class ScheduleService {
         return created;
     }
 
+    @Transactional
     public int bulkGenerateSlots(Master master, ServiceItem service, LocalDate weekStart,
                                  int weeks, java.util.EnumSet<DayOfWeek> days,
                                  LocalTime start, LocalTime end, boolean replace) {
@@ -92,5 +98,26 @@ public class ScheduleService {
         }
         return total;
     }
+
+    @Transactional
+    public int bulkClearDays(Long masterId, LocalDate weekStart, int weeks,
+                             java.util.EnumSet<java.time.DayOfWeek> days) {
+        int cleared = 0;
+        for (int w = 0; w < weeks; w++) {
+            LocalDate base = weekStart.plusWeeks(w);
+            for (java.time.DayOfWeek d : days) {
+                LocalDate day = base.with(d);
+                long before = countDaySlots(masterId, day);
+                clearDay(masterId, day);
+                cleared += (int) before;
+            }
+        }
+        return cleared;
+    }
+
+    public boolean hasAnySlots(Long masterId) {
+        return slotRepo.countByMasterId(masterId) > 0;
+    }
+
 
 }

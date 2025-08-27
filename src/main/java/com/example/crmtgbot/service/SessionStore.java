@@ -4,7 +4,9 @@ import com.example.crmtgbot.handler.ServiceItemHandler;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -136,18 +138,30 @@ public class SessionStore {
         private Step step = Step.NONE;
         private boolean active;
         private Boolean bulkReplace;
-    }
 
+    }
     private final Map<Long, CalendarSession> calendar = new ConcurrentHashMap<>();
 
     public CalendarSession ensureCalendar(Long chatId) {
         return calendar.computeIfAbsent(chatId, id -> {
-            var cs = new CalendarSession();
-            cs.setWeekStart(weekStart(LocalDate.now()));
+            CalendarSession cs = new CalendarSession();
+            cs.setWeekStart(weekStart(LocalDate.now())); // понедельник текущей недели
             cs.setActive(false);
+
+            // bulk defaults
+            cs.setBulk(false);
+            cs.setWeeks(null);
+            cs.setWeekdays(EnumSet.noneOf(DayOfWeek.class));
+            cs.setServiceId(null);
+            cs.setStartStr(null);
+            cs.setEndStr(null);
+            cs.setBulkReplace(null);
+            cs.setStep(CalendarSession.Step.NONE);
+
             return cs;
         });
     }
+
     public Optional<CalendarSession> getCalendar(Long chatId) { return Optional.ofNullable(calendar.get(chatId)); }
     public void clearCalendar(Long chatId) { calendar.remove(chatId); }
 

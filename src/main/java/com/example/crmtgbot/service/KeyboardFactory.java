@@ -186,15 +186,17 @@ public class KeyboardFactory {
         return new InlineKeyboardMarkup(rows);
     }
 
-    public InlineKeyboardMarkup scheduleDayMenu(LocalDate day) {
-        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    public InlineKeyboardMarkup scheduleDayMenu(LocalDate day, long count) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        rows.add(row(btn(i18n.t("schedule.day.view"), "C:view:"+ day)));
-        rows.add(row(btn(i18n.t("schedule.day.generate"), "C:gen:"+ day)));
-        rows.add(row(btn(i18n.t("schedule.day.clear"), "C:clear:"+ day)));
+        if (count > 0) {
+            rows.add(row(btn(i18n.t("schedule.day.view"), "C:view:" + day)));
+        }
+        rows.add(row(btn(i18n.t("schedule.day.generate"), "C:gen:" + day)));
+        rows.add(row(btn(i18n.t("schedule.day.dayoff"), "C:dayoff:" + day))); // очистка дня = выходной
         rows.add(row(btn(i18n.t("schedule.back"), "C:back:week")));
         return new InlineKeyboardMarkup(rows);
     }
+
 
     public InlineKeyboardMarkup scheduleChooseService(List<ServiceItem> services) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
@@ -223,22 +225,31 @@ public class KeyboardFactory {
     }
 
     // Кнопка bulk на экране недели (ДОБАВЬ В scheduleWeek)
-    public InlineKeyboardMarkup scheduleWeek(LocalDate monday, Map<LocalDate, Long> counters) {
-        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd.MM");
+    public InlineKeyboardMarkup scheduleWeek(LocalDate monday,
+                                             Map<LocalDate, Long> counters,
+                                             boolean hasAnySlots) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
+        if (!hasAnySlots) {
+            rows.add(row(btn(i18n.t("schedule.week.setup"), "C:setup:start")));
+            rows.add(row(btn(i18n.t("schedule.back"), "M:menu")));
+            return new InlineKeyboardMarkup(rows);
+        }
+
+        // обычная неделя
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd.MM");
         rows.add(row(
                 btn(i18n.t("schedule.week.prev"), "C:week:prev"),
                 btn(i18n.t("schedule.week.next"), "C:week:next")
         ));
-        for (int i=0; i<7; i++){
+        for (int i = 0; i < 7; i++) {
             LocalDate d = monday.plusDays(i);
             long cnt = counters.getOrDefault(d, 0L);
             String label = i18n.t("schedule.day.button",
                     d.format(df),
                     cnt == 0 ? i18n.t("schedule.day.empty") : String.valueOf(cnt));
-            rows.add(row(btn(label, "C:day:"+ d)));
+            rows.add(row(btn(label, "C:day:" + d)));
         }
-        rows.add(row(btn(i18n.t("schedule.week.bulk"), "C:bulk:start"))); // <— вот эта новая кнопка
+        rows.add(row(btn(i18n.t("schedule.week.setup"), "C:setup:start")));
         rows.add(row(btn(i18n.t("schedule.back"), "M:menu")));
         return new InlineKeyboardMarkup(rows);
     }
