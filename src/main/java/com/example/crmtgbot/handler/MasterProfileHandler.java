@@ -124,20 +124,23 @@ public class MasterProfileHandler implements UpdateHandler {
                     return;
                 }
                 case "P:save" -> {
-                    // сохраняем и выходим в меню
                     var from = cq.getFrom();
-                    Master m = masterService.getOrCreateMaster(chatId, from.getId(), from.getUserName(),
-                            st.getName() != null ? st.getName() : buildTgName(from.getFirstName(), from.getLastName(), from.getUserName()));
-                    m.setDisplayName(st.getName());
-                    m.setAddress(st.getAddress());
-                    m.setAbout(st.getAbout());
-                    masterService.save(m);
+                    // даст managed Master и id
+                    masterService.getOrCreateMaster(chatId, from.getId(), from.getUserName(),
+                            st.getName() != null ? st.getName()
+                                    : buildTgName(from.getFirstName(), from.getLastName(), from.getUserName()));
+
+                    // обновим профиль ТОЛЬКО полями
+                    Master updated = masterService.updateProfile(chatId, st.getName(), st.getAddress(), st.getAbout());
 
                     sessions.clearProfile(chatId);
-                    io.edit(chatId, cq.getMessage().getMessageId(), i18n.t("profile.saved"), kf.masterMenu(m.isAutoConfirm()));
+                    io.edit(chatId, cq.getMessage().getMessageId(),
+                            i18n.t("profile.saved"),
+                            kf.masterMenu(updated.isAutoConfirm()));
                     io.answerCallback(cq.getId(), "OK", false);
                     return;
                 }
+
                 case "P:edit:name" -> {
                     st.setActive(true);
                     st.setMode(SessionStore.MasterProfileState.Mode.EDIT_NAME);  // <---

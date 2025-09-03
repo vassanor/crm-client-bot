@@ -15,9 +15,8 @@ public class ServiceItemService {
     private final ServiceItemRepository repo;
 
     public List<ServiceItem> listForMaster(Long masterId) {
-        return repo.findByMasterId(masterId);
+        return repo.findByMasterIdOrderByNameAsc(masterId);
     }
-
     public ServiceItem create(Master master, String name) {
         ServiceItem s = new ServiceItem();
         s.setMaster(master);
@@ -35,5 +34,10 @@ public class ServiceItemService {
 
     public ServiceItem get(Long id) {
         return repo.findById(id).orElseThrow();
+    }
+
+    public ServiceItem getForMaster(Long id, Long masterId) {
+        return repo.findByIdAndMasterId(id, masterId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found for master"));
     }
 }

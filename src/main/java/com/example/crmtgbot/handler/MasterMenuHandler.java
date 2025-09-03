@@ -64,10 +64,10 @@ public class MasterMenuHandler implements UpdateHandler {
                 io.answerCallback(cq.getId(), "OK", false);
             }
             case "M:link" -> {
-                io.answerCallback(cq.getId(), "Ссылка отправлена", false);
-                io.send(chatId,
-                        i18n.t("master.link.hint", masterService.deepLink(botUsername, m)),
-                        null);
+                        buildName(cq);
+                String url = masterService.deepLink(m);
+                io.answerCallback(cq.getId(), i18n.t("ok"), false);
+                io.send(chatId, i18n.t("master.link.hint", url), null);
             }
             case "M:services" -> {
                 var list = serviceItemService.listForMaster(m.getId()); // <--- нужен бин serviceItemService

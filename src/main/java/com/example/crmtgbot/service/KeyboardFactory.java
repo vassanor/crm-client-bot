@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 
 import com.example.crmtgbot.i18n.I18n;
@@ -309,6 +310,55 @@ public class KeyboardFactory {
         rows.add(row(btn(i18n.t("schedule.bulk.cancel"), "C:back:week")));
         return new InlineKeyboardMarkup(rows);
     }
+
+    public InlineKeyboardMarkup scheduleUpcomingMenu(boolean hasItems) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        rows.add(row(btn(i18n.t("schedule.all.slots"), "C:week:view")));
+        rows.add(row(btn(i18n.t("schedule.week.setup"), "C:setup:start")));
+        rows.add(row(btn(i18n.t("back"), "M:menu")));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    public InlineKeyboardMarkup days(Long masterId, Long serviceId,
+                                     List<LocalDate> days, Function<LocalDate,Integer> countFn,
+                                     String backTarget) {
+        var df = java.time.format.DateTimeFormatter.ofPattern("EEE, dd.MM");
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        for (LocalDate d : days) {
+            int cnt = countFn.apply(d);
+            String label = df.format(d) + (cnt > 0 ? " · " + cnt : " · 0");
+            rows.add(row(btn(label, "B:day:" + masterId + ":" + serviceId + ":" + d.toString())));
+        }
+        rows.add(row(btn(i18n.t("booking.button.back"), "B:back:" + backTarget)));
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    // Показ недели: дни (Пн–Вс) + навигация по неделям + Назад
+    public InlineKeyboardMarkup weekGrid(LocalDate weekStart) {
+        // weekStart ожидаем как ПОНЕДЕЛЬНИК этой недели
+        var df = java.time.format.DateTimeFormatter.ofPattern("EEE, dd.MM");
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+
+        for (int i = 0; i < 7; i++) {
+            LocalDate d = weekStart.plusDays(i);
+            String label = df.format(d); // напр. "пн, 02.09"
+            rows.add(row(btn(label, "C:day:" + d))); // дальше хендлер откроет список слотов за день
+        }
+
+        // Навигация неделей
+        LocalDate prev = weekStart.minusWeeks(1);
+        LocalDate next = weekStart.plusWeeks(1);
+        rows.add(row(
+                btn("◀️ Неделя", "C:week:prev:" + prev),
+                btn("▶️ Неделя", "C:week:next:" + next)
+        ));
+
+        // Назад в меню расписания
+        rows.add(row(btn("◀️ Назад", "M:schedule")));
+
+        return new InlineKeyboardMarkup(rows);
+    }
+
 
 }
 

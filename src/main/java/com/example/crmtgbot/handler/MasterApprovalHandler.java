@@ -36,12 +36,12 @@ public class MasterApprovalHandler implements UpdateHandler {
         if (b == null) return;
         switch (p[1]) {
             case "ok" -> {
-                svc.approve(b);
+                svc.approve(b.getId());
                 io.edit(cq.getMessage().getChatId(), cq.getMessage().getMessageId(), i18n.t("master.approved"), null);
                 io.send(b.getClientChatId(), i18n.t("booking.approved.client"), null);
             }
             case "no" -> {
-                svc.reject(b);
+                svc.reject(b.getId());
                 io.edit(cq.getMessage().getChatId(), cq.getMessage().getMessageId(), i18n.t("master.rejected"), null);
                 io.send(b.getClientChatId(), i18n.t("booking.rejected.client"), null);
             }

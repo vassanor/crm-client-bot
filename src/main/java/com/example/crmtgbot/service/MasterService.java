@@ -6,19 +6,24 @@ import com.example.crmtgbot.model.TimeSlot;
 import com.example.crmtgbot.repo.MasterRepository;
 import com.example.crmtgbot.repo.TimeSlotRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class MasterService {
 
+    @Value("${bot.username:your_bot}")
+    private String botUsername;
     private final MasterRepository masterRepo;
     private final TimeSlotRepository slotRepo;
+
 
     public Master findById(Long id) {
         return masterRepo.findById(id).orElseThrow();
@@ -33,8 +38,26 @@ public class MasterService {
         }
     }
 
-    public String deepLink(String botUsername, Master m) {
-        return "https://t.me/" + botUsername + "?start=book_" + m.getId();
+    @Transactional
+    public Master updateProfile(Long chatId, String name, String address, String about) {
+        Master m = masterRepo.findByChatId(chatId)
+                .orElseThrow(() -> new IllegalStateException("Master not found for chatId=" + chatId));
+        m.setDisplayName(name);
+        m.setAddress(address);
+        m.setAbout(about);
+        // Возвращаем managed-объект; save не обязателен, но не вреден.
+        return m;
+    }
+
+    public String deepLink(Master m) {
+        // Короткий payload: m<ID>, чтобы точно уложиться в лимит Telegram (<=64 символов)
+        return "https://t.me/" + botUsername + "?start=m" + m.getId();
+    }
+
+    // перегрузка, если нужно где-то подменять имя бота вручную
+    public String deepLink(String botUsernameOverride, Master m) {
+        String u = (botUsernameOverride == null || botUsernameOverride.isBlank()) ? botUsername : botUsernameOverride;
+        return "https://t.me/" + u + "?start=m" + m.getId();
     }
 
     public Master toggleAuto(Master m) {
@@ -65,5 +88,9 @@ public class MasterService {
 
     public Master findByChatId(Long chatId) {
         return masterRepo.findByChatId(chatId).orElse(null);
+    }
+
+    public Optional<Master> findByIdOpt(Long id) {
+        return masterRepo.findById(id);
     }
 }

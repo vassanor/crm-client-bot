@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class BookingService {
@@ -31,18 +34,28 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking approve(Booking b) {
-        if (b.getStatus() != BookingStatus.CONFIRMED) {
-            b.setStatus(BookingStatus.CONFIRMED);
-            b.getSlot().setBooked(true);
-            slotRepo.save(b.getSlot());
-        }
-        return bookingRepo.save(b);
+    public Booking approve(Long bookingId) {
+        Booking b = bookingRepo.findWithDetailsById(bookingId).orElseThrow();
+        // Если используете статус — проставьте его
+        if (b.getStatus() != null) b.setStatus(BookingStatus.CONFIRMED);
+        return b; // managed; flush сделает save
     }
 
     @Transactional
-    public Booking reject(Booking b) {
-        b.setStatus(BookingStatus.REJECTED);
-        return bookingRepo.save(b);
+    public Booking reject(Long bookingId) {
+        Booking b = bookingRepo.findWithDetailsById(bookingId).orElseThrow();
+        // Освобождаем слот
+        b.getSlot().setBooked(false);
+        slotRepo.save(b.getSlot());
+        if (b.getStatus() != null) b.setStatus(BookingStatus.REJECTED);
+        return b; // запись можно оставить в БД с признаком REJECTED
+        // Если хотите удалять запись целиком — замените на: bookingRepo.delete(b); return b;
     }
+
+    @Transactional(readOnly = true)
+    public List<Booking> upcoming(Long masterId, int limit) {
+        var list = bookingRepo.upcomingWithDetails(masterId, java.time.LocalDateTime.now());
+        return list.size() > limit ? list.subList(0, limit) : list;
+    }
+
 }

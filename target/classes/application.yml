@@ -20,5 +20,5 @@ logging:
     org.telegram: INFO
     org.hibernate.SQL: INFO
 bot:
-  username: norca_bot
-  token: 8263186341:AAGYcLquLRfgJIstWsn2zy02XiExLHQTyQo
+  username: clientity_bot
+  token: 8424146194:AAHoNXKTUKDj6UWgA8tGNI18BKpQyzCi4Z0

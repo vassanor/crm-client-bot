@@ -2,14 +2,11 @@ package com.example.crmtgbot.handler;
 
 import com.example.crmtgbot.bot.BotIO;
 import com.example.crmtgbot.i18n.I18n;
+import com.example.crmtgbot.model.Booking;
 import com.example.crmtgbot.model.Master;
 import com.example.crmtgbot.model.ServiceItem;
 import com.example.crmtgbot.model.TimeSlot;
-import com.example.crmtgbot.service.KeyboardFactory;
-import com.example.crmtgbot.service.MasterService;
-import com.example.crmtgbot.service.ScheduleService;
-import com.example.crmtgbot.service.ServiceItemService;
-import com.example.crmtgbot.service.SessionStore;
+import com.example.crmtgbot.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
@@ -35,6 +32,7 @@ public class ScheduleHandler implements UpdateHandler {
     private final MasterService masterService;
     private final ServiceItemService serviceItemService;
     private final ScheduleService scheduleService;
+    private final BookingService bookingService;
     private final KeyboardFactory kf;
     private final BotIO io;
     private final I18n i18n;
@@ -64,9 +62,27 @@ public class ScheduleHandler implements UpdateHandler {
             Master m = masterService.findByChatId(chatId);
             var cs = sessions.ensureCalendar(chatId);
 
-            // вход из меню расписания
             if ("M:schedule".equals(data)) {
-                renderWeek(chatId, cq.getMessage().getMessageId(), cs, m);
+                var list = bookingService.upcoming(m.getId(), 10);
+                if (list.isEmpty()) {
+                    io.edit(chatId, cq.getMessage().getMessageId(),
+                            i18n.t("schedule.upcoming.empty"),
+                            kf.scheduleUpcomingMenu(false));
+                } else {
+                    var tf = java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm");
+                    StringBuilder sb = new StringBuilder(i18n.t("schedule.upcoming.title")).append("\n");
+                    for (Booking b : list) {
+                        String who = (b.getClientUsername() != null && !b.getClientUsername().isBlank())
+                                ? "@" + b.getClientUsername()
+                                : (b.getClientDisplayName() == null ? "—" : b.getClientDisplayName());
+                        sb.append("• ").append(b.getSlot().getStartTime().format(tf))
+                                .append(" — ").append(b.getService().getName())
+                                .append(" — ").append(who)
+                                .append("\n");
+                    }
+                    io.edit(chatId, cq.getMessage().getMessageId(),
+                            sb.toString(), kf.scheduleUpcomingMenu(true));
+                }
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }
@@ -87,6 +103,16 @@ public class ScheduleHandler implements UpdateHandler {
 
             if ("C:back:week".equals(data)) {
                 renderWeek(chatId, cq.getMessage().getMessageId(), cs, m);
+                io.answerCallback(cq.getId(), "OK", false);
+                return;
+            }
+
+            if ("C:week:view".equals(data)) {
+
+                LocalDate weekStart = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+                io.edit(chatId, cq.getMessage().getMessageId(),
+                        i18n.t("schedule.week.title", weekStart.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM"))),
+                        kf.weekGrid(weekStart)); // используйте свой метод клавиатуры
                 io.answerCallback(cq.getId(), "OK", false);
                 return;
             }

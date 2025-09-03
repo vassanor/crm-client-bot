@@ -20,4 +20,11 @@ public class ServiceItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "master_id")
     private Master master;
+
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ServiceItem other)) return false;
+        return id != null && id.equals(other.id);
+    }
+    @Override public int hashCode() { return 31; }
 }
